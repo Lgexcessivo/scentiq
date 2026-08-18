@@ -54,6 +54,7 @@ export interface Perfume {
   id: string;
   name: string;
   brand: string;
+  image?: string;
   gender: Gender;
   priceTier: PriceTier;
   priceBRL: number;

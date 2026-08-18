@@ -1,4 +1,4 @@
-import { Perfume } from "@/types/perfume";
+  import { Perfume } from "@/types/perfume";
 
 // ATENÇÃO: esta é uma versão INICIAL e REDUZIDA do banco de perfumes,
 // criada só para o site funcionar de ponta a ponta durante o
