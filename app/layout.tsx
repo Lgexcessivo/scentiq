@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import Navbar from "@/components/Navbar";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const display = Playfair_Display({
@@ -29,7 +30,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${sans.variable} ${display.variable}`}>
-      <body className="bg-charcoal-950 text-neutral-100 antialiased">{children}</body>
+      <body className="bg-charcoal-950 text-neutral-100 antialiased">
+        <Navbar />
+        {children}
+      </body>
     </html>
   );
 }
