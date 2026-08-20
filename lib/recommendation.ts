@@ -4,12 +4,23 @@ import { PERFUMES } from "@/data/perfumes";
 import { NOTE_MAP, STYLES } from "@/data/notes";
 import { ParsedFreeText } from "./textParser";
 
+// Um item do "extrato" de pontuação: quantos pontos esse critério deu,
+// de quantos pontos possíveis. Usado pra mostrar ao usuário exatamente
+// como a porcentagem de compatibilidade foi calculada.
+export interface ScoreBreakdownItem {
+  label: string;
+  earned: number;
+  max: number;
+}
+
 export interface RecommendationResult {
   perfume: Perfume;
   score: number;
   noteSimilarity: number;
   reasons: string[];
   overBudget: boolean;
+  breakdown: ScoreBreakdownItem[];
+  penalty: number;
 }
 
 const STYLE_LABEL: Record<Style, string> = Object.fromEntries(
@@ -37,6 +48,10 @@ const STYLE_LABEL: Record<Style, string> = Object.fromEntries(
  * Notas que o usuário NÃO gosta não somam pontos: elas geram uma
  * PENALIZAÇÃO (subtraída do total), para empurrar esses perfumes para
  * baixo na lista sem necessariamente escondê-los.
+ *
+ * Cada critério avaliado vira um item em "breakdown" (pontos ganhos / pontos
+ * possíveis daquele critério), pra interface mostrar o extrato completo —
+ * não só um resumo em texto.
  */
 
 const WEIGHTS = {
@@ -65,72 +80,82 @@ export function scorePerfume(
   perfume: Perfume,
   prefs: UserPreferences,
   textHints: ParsedFreeText | null
-): { score: number; noteSimilarity: number; reasons: string[]; overBudget: boolean } {
+): {
+  score: number;
+  noteSimilarity: number;
+  reasons: string[];
+  overBudget: boolean;
+  breakdown: ScoreBreakdownItem[];
+  penalty: number;
+} {
   const likedNotes = Array.from(new Set([...prefs.likedNotes, ...(textHints?.impliedNotes ?? [])]));
   const styles = Array.from(new Set([...prefs.styles, ...(textHints?.impliedStyles ?? [])]));
   const occasions = Array.from(new Set([...prefs.occasions, ...(textHints?.impliedOccasions ?? [])]));
   const perfumeNotes = allNotesOf(perfume);
 
   const reasons: string[] = [];
-  let earned = 0;
-  let available = 0;
+  const breakdown: ScoreBreakdownItem[] = [];
 
   // 1) Notas que o usuário gosta (peso 30)
   if (likedNotes.length > 0) {
-    available += WEIGHTS.likedNotes;
     const matchedExact = likedNotes.filter((n) => perfumeNotes.includes(n));
     const matchedByFamily = likedNotes.filter(
       (n) => !matchedExact.includes(n) && NOTE_MAP[n] && perfume.family.includes(NOTE_MAP[n].family)
     );
     const ratio = matchedExact.length / likedNotes.length + (matchedByFamily.length / likedNotes.length) * 0.4;
-    earned += WEIGHTS.likedNotes * Math.min(1, ratio);
+    const earned = WEIGHTS.likedNotes * Math.min(1, ratio);
+    breakdown.push({ label: "Notas favoritas", earned, max: WEIGHTS.likedNotes });
     if (matchedExact.length > 0) {
       const labels = matchedExact.map((n) => NOTE_MAP[n]?.label ?? n).join(", ");
       reasons.push(`Tem ${matchedExact.length} das suas notas favoritas: ${labels}`);
     }
   }
 
-  // 2) Notas que o usuário NÃO gosta — penalidade
+  // 2) Notas que o usuário NÃO gosta — penalidade (fica fora do breakdown
+  // de pontos positivos, mostrada separadamente)
   let penalty = 0;
   if (prefs.dislikedNotes.length > 0) {
     const matchedDisliked = prefs.dislikedNotes.filter((n) => perfumeNotes.includes(n));
     penalty = matchedDisliked.length * 18;
+    if (matchedDisliked.length > 0) {
+      const labels = matchedDisliked.map((n) => NOTE_MAP[n]?.label ?? n).join(", ");
+      reasons.push(`Contém nota(s) que você prefere evitar: ${labels}`);
+    }
   }
 
   // 3) Ocasião (peso 15)
   if (occasions.length > 0) {
-    available += WEIGHTS.occasion;
-    if (perfume.occasions.some((o) => occasions.includes(o))) {
-      earned += WEIGHTS.occasion;
-      reasons.push("Combina com a ocasião que você escolheu");
-    }
+    const match = perfume.occasions.some((o) => occasions.includes(o));
+    breakdown.push({ label: "Ocasião", earned: match ? WEIGHTS.occasion : 0, max: WEIGHTS.occasion });
+    if (match) reasons.push("Combina com a ocasião que você escolheu");
   }
 
   // 4) Estação (peso 8, opcional)
   if (prefs.season) {
-    available += WEIGHTS.season;
-    if (perfume.seasons.includes(prefs.season)) {
-      earned += WEIGHTS.season;
-      reasons.push("Recomendado para a estação que você escolheu");
-    }
+    const match = perfume.seasons.includes(prefs.season);
+    breakdown.push({ label: "Estação", earned: match ? WEIGHTS.season : 0, max: WEIGHTS.season });
+    if (match) reasons.push("Recomendado para a estação que você escolheu");
   }
 
   // 5) Intensidade (peso 10, com crédito parcial se for próxima)
-  available += WEIGHTS.intensity;
-  if (perfume.intensity === prefs.intensity) {
-    earned += WEIGHTS.intensity;
-    reasons.push(`Intensidade ${prefs.intensity}, como você pediu`);
-  } else {
-    const order = ["leve", "moderada", "forte"];
-    const diff = Math.abs(order.indexOf(perfume.intensity) - order.indexOf(prefs.intensity));
-    if (diff === 1) earned += WEIGHTS.intensity * 0.4;
+  {
+    let earned = 0;
+    if (perfume.intensity === prefs.intensity) {
+      earned = WEIGHTS.intensity;
+      reasons.push(`Intensidade ${prefs.intensity}, como você pediu`);
+    } else {
+      const order = ["leve", "moderada", "forte"];
+      const diff = Math.abs(order.indexOf(perfume.intensity) - order.indexOf(prefs.intensity));
+      if (diff === 1) earned = WEIGHTS.intensity * 0.4;
+    }
+    breakdown.push({ label: "Intensidade", earned, max: WEIGHTS.intensity });
   }
 
   // 6) Estilo (peso 15)
   if (styles.length > 0) {
-    available += WEIGHTS.style;
     const matched = perfume.styles.filter((s) => styles.includes(s));
-    earned += WEIGHTS.style * Math.min(1, matched.length / styles.length);
+    const earned = WEIGHTS.style * Math.min(1, matched.length / styles.length);
+    breakdown.push({ label: "Estilo", earned, max: WEIGHTS.style });
     if (matched.length > 0) {
       reasons.push(`Estilo ${matched.map((s) => STYLE_LABEL[s]).join(", ")}`);
     }
@@ -138,21 +163,22 @@ export function scorePerfume(
 
   // 7) Preço (peso 12) — perde pontos proporcionalmente quanto mais
   // ultrapassa o orçamento informado
-  available += WEIGHTS.price;
   const price = prefs.currency === "BRL" ? perfume.priceBRL : perfume.priceUSD;
   const overBudget = price > prefs.maxPrice;
-  if (!overBudget) {
-    earned += WEIGHTS.price;
-    reasons.push("Dentro do seu orçamento");
-  } else {
-    const excessRatio = (price - prefs.maxPrice) / prefs.maxPrice;
-    earned += Math.max(0, WEIGHTS.price * (1 - excessRatio * 2));
+  {
+    let earned = WEIGHTS.price;
+    if (overBudget) {
+      const excessRatio = (price - prefs.maxPrice) / prefs.maxPrice;
+      earned = Math.max(0, WEIGHTS.price * (1 - excessRatio * 2));
+    } else {
+      reasons.push("Dentro do seu orçamento");
+    }
+    breakdown.push({ label: "Preço", earned, max: WEIGHTS.price });
   }
 
   // 8) Bônus de texto livre (até 10 pontos) — usa notas/estilos implícitos
   // e similaridade com um perfume citado como referência
   if (textHints) {
-    available += WEIGHTS.freeText;
     const noteBonus = textHints.impliedNotes.filter((n) => perfumeNotes.includes(n)).length * 2;
     const styleBonus = textHints.impliedStyles.filter((s) => perfume.styles.includes(s)).length * 1.5;
     let refBonus = 0;
@@ -166,10 +192,13 @@ export function scorePerfume(
       refBonus = sims.length > 0 ? Math.max(...sims) * 10 : 0;
       if (refBonus > 5) reasons.push("Perfil parecido com o perfume que você mencionou");
     }
-    earned += Math.min(WEIGHTS.freeText, noteBonus + styleBonus + refBonus);
+    const earned = Math.min(WEIGHTS.freeText, noteBonus + styleBonus + refBonus);
+    breakdown.push({ label: "Texto livre", earned, max: WEIGHTS.freeText });
   }
 
-  const rawScore = available > 0 ? (earned / available) * 100 : 0;
+  const available = breakdown.reduce((sum, b) => sum + b.max, 0);
+  const earnedTotal = breakdown.reduce((sum, b) => sum + b.earned, 0);
+  const rawScore = available > 0 ? (earnedTotal / available) * 100 : 0;
   const finalScore = Math.max(0, Math.min(100, rawScore - penalty));
 
   const noteSimilarity =
@@ -180,8 +209,10 @@ export function scorePerfume(
   return {
     score: Math.round(finalScore),
     noteSimilarity,
-    reasons: reasons.slice(0, 4),
+    reasons: reasons.slice(0, 6),
     overBudget,
+    breakdown,
+    penalty,
   };
 }
 
@@ -190,8 +221,12 @@ export function getRecommendations(
   textHints: ParsedFreeText | null
 ): { results: RecommendationResult[]; relaxed: boolean } {
   const scored: RecommendationResult[] = PERFUMES.map((perfume) => {
-    const { score, noteSimilarity, reasons, overBudget } = scorePerfume(perfume, prefs, textHints);
-    return { perfume, score, noteSimilarity, reasons, overBudget };
+    const { score, noteSimilarity, reasons, overBudget, breakdown, penalty } = scorePerfume(
+      perfume,
+      prefs,
+      textHints
+    );
+    return { perfume, score, noteSimilarity, reasons, overBudget, breakdown, penalty };
   });
 
   // Filtro "rígido": tira da lista principal perfumes muito acima do

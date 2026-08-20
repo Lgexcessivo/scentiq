@@ -16,7 +16,7 @@ function noteLabels(ids: string[]) {
 }
 
 export default function PerfumeModal({ result, currency, onClose }: PerfumeModalProps) {
-  const { perfume, score, noteSimilarity, reasons, overBudget } = result;
+  const { perfume, score, noteSimilarity, reasons, overBudget, breakdown, penalty } = result;
   const price = currency === "BRL" ? perfume.priceBRL : perfume.priceUSD;
   const priceLabel = currency === "BRL" ? `R$ ${price}` : `US$ ${price}`;
 
@@ -44,7 +44,16 @@ export default function PerfumeModal({ result, currency, onClose }: PerfumeModal
         <div className="flex justify-between items-start gap-4 mb-6">
           <div className="flex gap-4 items-center">
             <div className="w-16 h-24 shrink-0">
-              <PerfumeIcon family={perfume.family} />
+              {perfume.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={perfume.image}
+                  alt={`${perfume.brand} ${perfume.name}`}
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <PerfumeIcon family={perfume.family} />
+              )}
             </div>
             <div>
               <p className="text-xs text-neutral-500 uppercase tracking-wide">{perfume.brand}</p>
@@ -75,6 +84,35 @@ export default function PerfumeModal({ result, currency, onClose }: PerfumeModal
             <p className="text-[11px] text-neutral-500 mt-1">Intensidade</p>
           </div>
         </div>
+
+        {breakdown.length > 0 && (
+          <div className="mb-6">
+            <p className="section-label mb-3">Como chegamos nos {score}%</p>
+            <div className="space-y-2.5">
+              {breakdown.map((b, i) => {
+                const pct = b.max > 0 ? Math.min(100, Math.round((b.earned / b.max) * 100)) : 0;
+                return (
+                  <div key={i}>
+                    <div className="flex justify-between text-xs text-neutral-400 mb-1">
+                      <span>{b.label}</span>
+                      <span>
+                        {Math.round(b.earned)}/{b.max} pts
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-gold-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+              {penalty > 0 && (
+                <p className="text-xs text-red-400 pt-1">
+                  −{penalty} pontos por conter nota(s) que você prefere evitar
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {reasons.length > 0 && (
           <div className="mb-6">
