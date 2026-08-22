@@ -39,6 +39,7 @@ export type Sillage = "discreta" | "moderada" | "forte";
 export type Style =
   | "fresco"
   | "doce"
+  | "floral"
   | "amadeirado"
   | "citrico"
   | "aromatico"

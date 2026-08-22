@@ -19,6 +19,7 @@ export function normalize(text: string): string {
 const STYLE_SYNONYMS: Record<Style, string[]> = {
   fresco: ["fresco", "refrescante"],
   doce: ["doce", "adocicado", "acucarado"],
+  floral: ["floral", "florais", "flores"],
   amadeirado: ["amadeirado", "madeira", "madeirado"],
   citrico: ["citrico"],
   aromatico: ["aromatico", "ervas"],

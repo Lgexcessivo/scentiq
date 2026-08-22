@@ -1314,7 +1314,6 @@ export const PERFUMES: Perfume[] = [
     pros: ["Ótimo custo-benefício", "Cheiro delicado e elegante"],
     cons: ["Fixação mediana"],
   },
-]; [
   {
     id: "gucci-guilty-pour-homme-edp",
     name: "Guilty Pour Homme Eau de Parfum",

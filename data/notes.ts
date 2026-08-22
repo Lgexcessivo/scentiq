@@ -90,6 +90,7 @@ export const INTENSITIES: { id: Intensity; label: string; description: string }[
 export const STYLES: { id: Style; label: string }[] = [
   { id: "fresco", label: "Fresco" },
   { id: "doce", label: "Doce" },
+  { id: "floral", label: "Floral" },
   { id: "amadeirado", label: "Amadeirado" },
   { id: "citrico", label: "Cítrico" },
   { id: "aromatico", label: "Aromático" },
