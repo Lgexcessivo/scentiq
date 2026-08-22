@@ -45,7 +45,7 @@ const OCCASION_SYNONYMS: Record<Occasion, string[]> = {
 };
 
 // Interpretador local baseado em palavras-chave. Não depende de nenhuma
-// API externa, então o site funciona 100% mesmo sem OPENAI_API_KEY
+// API externa, então o site funciona 100% mesmo sem GEMINI_API_KEY
 // configurada (ver lib/ai.ts para a versão opcional com IA).
 export function parseFreeTextLocally(text: string): ParsedFreeText {
   const normalized = normalize(text);

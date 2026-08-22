@@ -68,6 +68,7 @@ export default function PerfumeFinder() {
           results={results}
           relaxed={relaxed}
           currency={preferences.currency}
+          preferences={preferences}
           onReset={() => {
             setPreferences(DEFAULT_PREFERENCES);
             setView("form");

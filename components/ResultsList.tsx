@@ -3,23 +3,34 @@
 import { useMemo, useState } from "react";
 import type { RecommendationResult } from "@/lib/recommendation";
 import { Gender } from "@/types/perfume";
+import { UserPreferences } from "@/types/preferences";
 import FilterBar from "./FilterBar";
 import PerfumeCard from "./PerfumeCard";
 import PerfumeModal from "./PerfumeModal";
 import EmptyState from "./EmptyState";
+import { useFavorites } from "@/lib/favorites";
 
 interface ResultsListProps {
   results: RecommendationResult[];
   relaxed: boolean;
   currency: "BRL" | "USD";
+  preferences: UserPreferences;
   onReset: () => void;
   onEditPreferences: () => void;
 }
 
-export default function ResultsList({ results, relaxed, currency, onReset, onEditPreferences }: ResultsListProps) {
+export default function ResultsList({
+  results,
+  relaxed,
+  currency,
+  preferences,
+  onReset,
+  onEditPreferences,
+}: ResultsListProps) {
   const [sortBy, setSortBy] = useState<"compat" | "price">("compat");
   const [genderFilter, setGenderFilter] = useState<Gender | "todos">("todos");
   const [selected, setSelected] = useState<RecommendationResult | null>(null);
+  const { isFavorite, toggle } = useFavorites();
 
   const filtered = useMemo(() => {
     let list = results;
@@ -56,7 +67,14 @@ export default function ResultsList({ results, relaxed, currency, onReset, onEdi
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((r) => (
-            <PerfumeCard key={r.perfume.id} result={r} currency={currency} onOpenDetails={() => setSelected(r)} />
+            <PerfumeCard
+              key={r.perfume.id}
+              result={r}
+              currency={currency}
+              onOpenDetails={() => setSelected(r)}
+              isFavorite={isFavorite(r.perfume.id)}
+              onToggleFavorite={() => toggle(r.perfume.id)}
+            />
           ))}
         </div>
       )}
@@ -70,7 +88,9 @@ export default function ResultsList({ results, relaxed, currency, onReset, onEdi
         </button>
       </div>
 
-      {selected && <PerfumeModal result={selected} currency={currency} onClose={() => setSelected(null)} />}
+      {selected && (
+        <PerfumeModal result={selected} currency={currency} preferences={preferences} onClose={() => setSelected(null)} />
+      )}
     </section>
   );
 }

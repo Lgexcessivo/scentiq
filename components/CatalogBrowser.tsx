@@ -5,6 +5,7 @@ import { PERFUMES } from "@/data/perfumes";
 import { NOTE_MAP, FAMILY_LABELS } from "@/data/notes";
 import { Gender, OlfactoryFamily, Perfume } from "@/types/perfume";
 import { normalize } from "@/lib/textParser";
+import { useFavorites } from "@/lib/favorites";
 import CatalogCard from "./CatalogCard";
 import CatalogModal from "./CatalogModal";
 
@@ -35,6 +36,7 @@ export default function CatalogBrowser() {
   const [sortBy, setSortBy] = useState<"nome" | "preco-menor" | "preco-maior">("nome");
   const [currency, setCurrency] = useState<"BRL" | "USD">("BRL");
   const [selected, setSelected] = useState<Perfume | null>(null);
+  const { isFavorite, toggle } = useFavorites();
 
   const filtered = useMemo(() => {
     let list = PERFUMES.filter((p) => matchesSearch(p, search));
@@ -141,7 +143,14 @@ export default function CatalogBrowser() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((p) => (
-            <CatalogCard key={p.id} perfume={p} currency={currency} onOpenDetails={() => setSelected(p)} />
+            <CatalogCard
+              key={p.id}
+              perfume={p}
+              currency={currency}
+              onOpenDetails={() => setSelected(p)}
+              isFavorite={isFavorite(p.id)}
+              onToggleFavorite={() => toggle(p.id)}
+            />
           ))}
         </div>
       )}

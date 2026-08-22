@@ -1,24 +1,43 @@
 import type { RecommendationResult } from "@/lib/recommendation";
 import { FAMILY_LABELS } from "@/data/notes";
 import PerfumeIcon from "./PerfumeIcon";
+import HeartButton from "./HeartButton";
 
 interface PerfumeCardProps {
   result: RecommendationResult;
   currency: "BRL" | "USD";
   onOpenDetails: () => void;
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
 }
 
-export default function PerfumeCard({ result, currency, onOpenDetails }: PerfumeCardProps) {
+export default function PerfumeCard({
+  result,
+  currency,
+  onOpenDetails,
+  isFavorite,
+  onToggleFavorite,
+}: PerfumeCardProps) {
   const { perfume, score, overBudget } = result;
   const price = currency === "BRL" ? perfume.priceBRL : perfume.priceUSD;
   const priceLabel = currency === "BRL" ? `R$ ${price}` : `US$ ${price}`;
 
   return (
     <div className="glass-card overflow-hidden flex flex-col animate-rise">
-      <div className="h-40 bg-black/20 flex items-center justify-center p-4">
-        <div className="w-20 h-28">
-          <PerfumeIcon family={perfume.family} />
-        </div>
+      <div className="h-40 bg-black/20 flex items-center justify-center p-4 relative">
+        <HeartButton active={isFavorite} onToggle={onToggleFavorite} />
+        {perfume.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={perfume.image}
+            alt={`${perfume.brand} ${perfume.name}`}
+            className="h-full w-auto object-contain"
+          />
+        ) : (
+          <div className="w-20 h-28">
+            <PerfumeIcon family={perfume.family} />
+          </div>
+        )}
       </div>
       <div className="p-5 flex flex-col gap-3 flex-1">
         <div className="flex items-start justify-between gap-2">

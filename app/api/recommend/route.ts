@@ -5,7 +5,7 @@ import { parseFreeTextWithAI } from "@/lib/ai";
 import { getRecommendations } from "@/lib/recommendation";
 
 // Esta rota roda no servidor (nunca no navegador), por isso é o único
-// lugar do projeto que pode ler process.env.OPENAI_API_KEY com segurança.
+// lugar do projeto que pode ler process.env.GEMINI_API_KEY com segurança.
 export async function POST(request: Request) {
   try {
     let body: unknown;
@@ -30,11 +30,11 @@ export async function POST(request: Request) {
       // O interpretador local sempre roda (rápido, grátis e confiável).
       const local = parseFreeTextLocally(preferences.freeText);
 
-      // Se houver uma chave da OpenAI configurada, tentamos enriquecer o
+      // Se houver uma chave do Gemini configurada, tentamos enriquecer o
       // resultado com a IA. Se falhar por qualquer motivo, ficamos só com
       // o resultado local — o site nunca quebra por causa disso.
       let ai: ParsedFreeText | null = null;
-      if (process.env.OPENAI_API_KEY) {
+      if (process.env.GEMINI_API_KEY) {
         ai = await parseFreeTextWithAI(preferences.freeText).catch(() => null);
       }
 

@@ -1,20 +1,30 @@
 import type { Perfume } from "@/types/perfume";
 import { FAMILY_LABELS } from "@/data/notes";
 import PerfumeIcon from "./PerfumeIcon";
+import HeartButton from "./HeartButton";
 
 interface CatalogCardProps {
   perfume: Perfume;
   currency: "BRL" | "USD";
   onOpenDetails: () => void;
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
 }
 
-export default function CatalogCard({ perfume, currency, onOpenDetails }: CatalogCardProps) {
+export default function CatalogCard({
+  perfume,
+  currency,
+  onOpenDetails,
+  isFavorite,
+  onToggleFavorite,
+}: CatalogCardProps) {
   const price = currency === "BRL" ? perfume.priceBRL : perfume.priceUSD;
   const priceLabel = currency === "BRL" ? `R$ ${price}` : `US$ ${price}`;
 
   return (
     <div className="glass-card overflow-hidden flex flex-col animate-rise">
-      <div className="h-40 bg-black/20 flex items-center justify-center p-4">
+      <div className="h-40 bg-black/20 flex items-center justify-center p-4 relative">
+        <HeartButton active={isFavorite} onToggle={onToggleFavorite} />
         {perfume.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

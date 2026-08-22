@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { RecommendationResult } from "@/lib/recommendation";
 import { FAMILY_LABELS, NOTE_MAP, OCCASIONS, SEASONS } from "@/data/notes";
+import { UserPreferences } from "@/types/preferences";
 import PerfumeIcon from "./PerfumeIcon";
 
 interface PerfumeModalProps {
   result: RecommendationResult;
   currency: "BRL" | "USD";
+  preferences: UserPreferences;
   onClose: () => void;
 }
 
@@ -15,10 +17,40 @@ function noteLabels(ids: string[]) {
   return ids.map((id) => NOTE_MAP[id]?.label ?? id).join(", ");
 }
 
-export default function PerfumeModal({ result, currency, onClose }: PerfumeModalProps) {
+export default function PerfumeModal({ result, currency, preferences, onClose }: PerfumeModalProps) {
   const { perfume, score, noteSimilarity, reasons, overBudget, breakdown, penalty } = result;
   const price = currency === "BRL" ? perfume.priceBRL : perfume.priceUSD;
   const priceLabel = currency === "BRL" ? `R$ ${price}` : `US$ ${price}`;
+
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAiLoading(true);
+    setAiExplanation(null);
+
+    fetch("/api/explain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ perfume, preferences, score, breakdown, reasons }),
+    })
+      .then((res) => (res.ok ? res.json() : { explanation: null }))
+      .then((data) => {
+        if (!cancelled) setAiExplanation(data?.explanation ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setAiExplanation(null);
+      })
+      .finally(() => {
+        if (!cancelled) setAiLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perfume.id]);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -111,6 +143,23 @@ export default function PerfumeModal({ result, currency, onClose }: PerfumeModal
                 </p>
               )}
             </div>
+          </div>
+        )}
+
+        {(aiLoading || aiExplanation) && (
+          <div className="mb-6 glass-card !bg-gold-500/5 !border-gold-500/20 p-4">
+            <p className="text-xs text-gold-400 mb-2 flex items-center gap-1.5">
+              <span>✨</span>
+              <span>Resumo gerado por IA</span>
+            </p>
+            {aiLoading ? (
+              <div className="space-y-2">
+                <div className="h-3 bg-white/5 rounded animate-pulse w-full" />
+                <div className="h-3 bg-white/5 rounded animate-pulse w-4/5" />
+              </div>
+            ) : (
+              <p className="text-sm text-neutral-200 leading-relaxed">{aiExplanation}</p>
+            )}
           </div>
         )}
 

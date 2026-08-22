@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useFavorites } from "@/lib/favorites";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { favorites } = useFavorites();
 
   return (
     <header className="sticky top-0 z-40 bg-charcoal-950/80 backdrop-blur-md border-b border-white/5">
@@ -18,6 +20,9 @@ export default function Navbar() {
           </Link>
           <Link href="/catalogo" className={`chip ${pathname === "/catalogo" ? "chip-selected" : ""}`}>
             Catálogo
+          </Link>
+          <Link href="/favoritos" className={`chip ${pathname === "/favoritos" ? "chip-selected" : ""}`}>
+            Favoritos{favorites.length > 0 ? ` (${favorites.length})` : ""}
           </Link>
         </nav>
       </div>
